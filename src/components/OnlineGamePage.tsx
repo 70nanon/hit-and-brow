@@ -343,6 +343,16 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
     // 勝敗判定
     const iWon = myResults.some((r) => isGameClear(r, room.config));
     const opponentWon = opponentResults.some((r) => isGameClear(r, room.config));
+    
+    // ターンオーバー判定（相手がターン数上限に達したら勝ち）
+    const myTurnCount = myPlayer?.guesses.length || 0;
+    const opponentTurnCount = opponentPlayer?.guesses.length || 0;
+    const iWonByTurnLimit = !opponentWon && isTurnLimitReached(opponentTurnCount, room.config);
+    const opponentWonByTurnLimit = !iWon && isTurnLimitReached(myTurnCount, room.config);
+
+    // 最終的な勝敗
+    const finalIWon = iWon || iWonByTurnLimit;
+    const finalOpponentWon = opponentWon || opponentWonByTurnLimit;
 
     return (
       <div className="min-h-screen bg-gray-100 py-8">
@@ -368,13 +378,13 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
           </div>
 
           {/* 勝敗表示 */}
-          {(iWon || opponentWon) && (
-            <div className={`${iWon ? 'bg-green-100 border-green-600' : 'bg-red-100 border-red-600'} border-2 rounded-lg p-6 mb-6 text-center`}>
+          {(finalIWon || finalOpponentWon) && (
+            <div className={`${finalIWon ? 'bg-green-100 border-green-600' : 'bg-red-100 border-red-600'} border-2 rounded-lg p-6 mb-6 text-center`}>
               <h3 className="text-2xl font-bold mb-2">
-                {iWon ? '🎉 勝利！' : '😢 敗北...'}
+                {finalIWon ? '🎉 勝利！' : '😢 敗北...'}
               </h3>
               <p className="mb-2">
-                {iWon ? 'おめでとうございます！' : '相手が先にクリアしました'}
+                {finalIWon ? (iWonByTurnLimit ? '相手がターン数上限に達しました！' : 'おめでとうございます！') : (opponentWonByTurnLimit ? 'ターン数上限に達しました...' : '相手が先にクリアしました')}
               </p>
               <p className="font-mono">
                 相手の数字: <span className="font-bold">{opponentPlayer?.secret}</span>
@@ -393,7 +403,7 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
               </h3>
               
               {/* 入力フォーム */}
-              {!iWon && !opponentWon && (
+              {!finalIWon && !finalOpponentWon && (
                 <form onSubmit={handleSubmitGuess} className="mb-4">
                   <div className="flex gap-2">
                     <input
@@ -413,7 +423,7 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
                       推測
                     </button>
                   </div>
-                  {!isMyTurn && !iWon && !opponentWon && (
+                  {!isMyTurn && !finalIWon && !finalOpponentWon && (
                     <p className="text-sm text-gray-500 mt-2">相手のターンです</p>
                   )}
                   {error && (
