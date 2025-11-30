@@ -19,6 +19,7 @@ export interface Player {
   isReady: boolean;      // 準備完了フラグ
   secret?: string;       // 自分の秘密の数字（相手には見えない）
   guesses: string[];     // 推測の履歴
+  lastActiveAt: number;  // 最終アクティブ時刻（タイムスタンプ）
 }
 
 /**

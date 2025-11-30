@@ -39,6 +39,7 @@ export async function createRoom(data: CreateRoomData): Promise<string> {
       role: 'host',
       isReady: false,
       guesses: [],
+      lastActiveAt: now,
     },
     guest: null,
     currentTurn: 'host',
@@ -74,16 +75,18 @@ export async function joinRoom(roomId: string, guestUid: string): Promise<boolea
     throw new Error('このルームには参加できません');
   }
 
+  const now = Date.now();
   const guest: Player = {
     uid: guestUid,
     role: 'guest',
     isReady: false,
     guesses: [],
+    lastActiveAt: now,
   };
 
   await updateDoc(roomRef, {
     guest,
-    updatedAt: Date.now(),
+    updatedAt: now,
   });
 
   return true;
@@ -304,4 +307,36 @@ export async function finishGame(roomId: string): Promise<void> {
 export async function deleteRoom(roomId: string): Promise<void> {
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
   await deleteDoc(roomRef);
+}
+
+/**
+ * プレイヤーのアクティブ状態を更新
+ * @param roomId ルームID
+ * @param playerUid プレイヤーのUID
+ */
+export async function updatePlayerActive(
+  roomId: string,
+  playerUid: string
+): Promise<void> {
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  const roomSnap = await getDoc(roomRef);
+
+  if (!roomSnap.exists()) {
+    return;
+  }
+
+  const room = roomSnap.data() as Room;
+  const now = Date.now();
+
+  if (room.host.uid === playerUid) {
+    await updateDoc(roomRef, {
+      'host.lastActiveAt': now,
+      updatedAt: now,
+    });
+  } else if (room.guest?.uid === playerUid) {
+    await updateDoc(roomRef, {
+      'guest.lastActiveAt': now,
+      updatedAt: now,
+    });
+  }
 }

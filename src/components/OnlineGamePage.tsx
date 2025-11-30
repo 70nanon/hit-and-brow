@@ -7,6 +7,7 @@ import {
   startGame,
   submitGuess,
   deleteRoom,
+  updatePlayerActive,
 } from '../utils/roomService';
 import { generateRandomSecret, validateGuess, checkGuess, isGameClear } from '../utils/gameLogic';
 import type { Room } from '../utils/roomTypes';
@@ -36,6 +37,15 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
   const isMyTurn = room?.currentTurn === (isHost ? 'host' : 'guest');
 
   /**
+   * プレイヤーがオンラインかどうか判定（30秒以内にアクティブ）
+   */
+  const isPlayerOnline = (lastActiveAt: number): boolean => {
+    const now = Date.now();
+    const ONLINE_THRESHOLD = 30 * 1000; // 30秒
+    return now - lastActiveAt < ONLINE_THRESHOLD;
+  };
+
+  /**
    * ルーム情報のリアルタイム監視
    */
   useEffect(() => {
@@ -50,6 +60,23 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
 
     return () => unsubscribe();
   }, [roomId, onExit]);
+
+  /**
+   * 定期的にアクティブ状態を更新（10秒ごと）
+   */
+  useEffect(() => {
+    if (!user) return;
+
+    // 初回実行
+    updatePlayerActive(roomId, user.uid);
+
+    // 10秒ごとに更新
+    const interval = setInterval(() => {
+      updatePlayerActive(roomId, user.uid);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [roomId, user]);
 
   /**
    * ルームから退出（ホストの場合はルーム削除）
@@ -210,6 +237,7 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
                 <div className="bg-blue-50 p-4 rounded">
                   <h3 className="font-bold mb-2">ホスト</h3>
                   <p className="text-sm text-gray-600 mb-2">
+                    <span className="mr-1">{isPlayerOnline(room.host.lastActiveAt) ? '🟢' : '⚫'}</span>
                     {room.host.uid.substring(0, 8)}...
                     {isHost && ' (あなた)'}
                   </p>
@@ -224,6 +252,7 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
                   {room.guest ? (
                     <>
                       <p className="text-sm text-gray-600 mb-2">
+                        <span className="mr-1">{isPlayerOnline(room.guest.lastActiveAt) ? '🟢' : '⚫'}</span>
                         {room.guest.uid.substring(0, 8)}...
                         {!isHost && ' (あなた)'}
                       </p>
