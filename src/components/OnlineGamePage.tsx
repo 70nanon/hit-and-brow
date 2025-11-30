@@ -10,7 +10,7 @@ import {
   updatePlayerActive,
   leaveRoomAsGuest,
 } from '../utils/roomService';
-import { generateRandomSecret, validateGuess, checkGuess, isGameClear } from '../utils/gameLogic';
+import { generateRandomSecret, validateGuess, checkGuess, isGameClear, isTurnLimitReached } from '../utils/gameLogic';
 import type { Room } from '../utils/roomTypes';
 
 interface OnlineGamePageProps {
@@ -173,6 +173,13 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
       return;
     }
 
+    // ターン数制限チェック
+    const currentTurnCount = myPlayer?.guesses.length || 0;
+    if (isTurnLimitReached(currentTurnCount, room.config)) {
+      setError('最大ターン数に達しました');
+      return;
+    }
+
     try {
       setLoading(true);
       await submitGuess(roomId, user.uid, currentGuess);
@@ -232,6 +239,9 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
                 <p>
                   {room.config.digits}桁
                   {room.config.allowDuplicate ? ' (重複あり)' : ' (重複なし)'}
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  最大ターン数: {room.config.maxTurns ? `${room.config.maxTurns}ターン` : '無制限'}
                 </p>
               </div>
 
@@ -351,6 +361,9 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
             <p className="text-sm text-gray-600 mt-2">
               {room.config.digits}桁
               {room.config.allowDuplicate ? ' (重複あり)' : ' (重複なし)'}
+              {' / '}
+              ターン: {myPlayer?.guesses.length || 0}
+              {room.config.maxTurns && ` / ${room.config.maxTurns}`}
             </p>
           </div>
 

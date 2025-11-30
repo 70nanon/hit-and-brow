@@ -22,6 +22,7 @@ export default function RoomListPage({ onJoinRoom }: RoomListPageProps) {
   const [config, setConfig] = useState<GameConfig>({
     digits: 4,
     allowDuplicate: false,
+    maxTurns: 15,
   });
 
   /**
@@ -143,6 +144,27 @@ export default function RoomListPage({ onJoinRoom }: RoomListPageProps) {
               </label>
             </div>
 
+            {/* 最大ターン数選択 */}
+            <div>
+              <label className="block text-sm font-medium mb-2">最大ターン数</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[10, 15, 20, 0].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => setConfig({ ...config, maxTurns: num || undefined })}
+                    className={`py-2 px-4 rounded ${
+                      (config.maxTurns || 0) === num
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                    disabled={loading}
+                  >
+                    {num === 0 ? '無制限' : `${num}ターン`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* 作成ボタン */}
             <button
               onClick={handleCreateRoom}
@@ -186,6 +208,8 @@ export default function RoomListPage({ onJoinRoom }: RoomListPageProps) {
                       <div className="font-medium">
                         {room.config.digits}桁 
                         {room.config.allowDuplicate ? ' (重複あり)' : ' (重複なし)'}
+                        {' / '}
+                        {room.config.maxTurns ? `${room.config.maxTurns}ターン` : '無制限'}
                       </div>
                       <div className="text-sm text-gray-600">
                         ホスト: {room.host.uid.substring(0, 8)}...

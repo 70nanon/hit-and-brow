@@ -2,12 +2,14 @@
 export type GameConfig = {
   digits: number;           // 桁数（3〜6桁など）
   allowDuplicate: boolean;  // 重複を許可するか
+  maxTurns?: number;        // 最大ターン数（オプション、未設定の場合は無制限）
 }
 
-// デフォルト設定（4桁、重複なし）
+// デフォルト設定（4桁、重複なし、15ターン）
 export const defaultConfig: GameConfig = {
   digits: 4,
   allowDuplicate: false,
+  maxTurns: 15,
 }
 
 // ヒット・ブローの判定結果
@@ -109,4 +111,17 @@ export function checkGuess(secret: string, guess: string): GuessResult {
  */
 export function isGameClear(result: GuessResult, config: GameConfig = defaultConfig): boolean {
   return result.hit === config.digits;
+}
+
+/**
+ * ターン数オーバー判定
+ * @param turnCount 現在のターン数
+ * @param config ゲーム設定
+ * @returns ターン数オーバーかどうか
+ */
+export function isTurnLimitReached(turnCount: number, config: GameConfig = defaultConfig): boolean {
+  if (!config.maxTurns) {
+    return false; // 最大ターン数が設定されていない場合は無制限
+  }
+  return turnCount >= config.maxTurns;
 }
