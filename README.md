@@ -1,73 +1,100 @@
-# React + TypeScript + Vite
+# Hit and Blow - オンライン対戦ゲーム
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Firebaseを利用したヒットアンドブローのオンライン対戦Webアプリケーション
 
-Currently, two official plugins are available:
+## 🎯 プロジェクト概要
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+このプロジェクトは、Firebase学習を目的としたヒットアンドブロー（数当てゲーム）のオンライン対戦アプリです。
+相手が設定した4桁の数字を当てるターン制のゲームで、リアルタイムで対戦できます。
 
-## React Compiler
+## 🛠️ 技術スタック
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **フロントエンド**: React 19 + TypeScript
+- **ビルドツール**: Vite (rolldown-vite 7.2.5)
+  - vite インストール時のドキュメント　→　[vite_readme.md](documents/vite_readme.md)
+- **スタイリング**: Tailwind CSS（予定）
+- **バックエンド**: Firebase
+  - Authentication（認証）
+  - Firestore（データベース）
+  - Hosting（ホスティング）
 
-## Expanding the ESLint configuration
+## 📋 主な機能（予定）
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- ✅ ユーザー認証（匿名ログイン / Google認証）
+- ✅ ゲームルーム作成・参加
+- ✅ リアルタイムでのターン制バトル
+- ✅ 4桁の数字を当てるヒットアンドブローのルール
+- ✅ 勝敗履歴
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🚀 開発の流れ
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### ✅ 完了したステップ
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. **プロジェクトセットアップ**
+   - Vite + React + TypeScriptの環境構築
+   - GitHubリポジトリの作成と初回コミット
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 📝 これからの作業
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+2. **Tailwind CSSのセットアップ**
+   - UIを綺麗にするためのスタイリングフレームワーク導入
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+3. **Firebase SDKのセットアップ**
+   - Firebase Authentication, Firestoreの初期設定
+   - 環境変数の設定
+
+4. **認証機能の実装**
+   - 匿名ログインまたはGoogle認証の実装
+   - ユーザー状態管理
+
+5. **ゲームロジックの実装**
+   - ヒットアンドブローのコアロジック作成
+   - 数字の重複チェック、ヒット・ブロー判定
+
+6. **ルーム管理機能の実装**
+   - ゲームルームの作成・参加機能
+   - Firestoreでのルーム情報管理
+
+7. **リアルタイム対戦機能の実装**
+   - Firestoreのリアルタイム同期を使った対戦機能
+   - ターン管理、ゲーム状態の同期
+
+8. **UIコンポーネントの作成**
+   - ゲーム画面、ルーム一覧、履歴画面などの実装
+
+## 🎮 ヒットアンドブローのルール
+
+1. プレイヤーは0〜9の数字を使った4桁の数字を設定（重複なし）
+2. 交互に相手の数字を予想して入力
+3. 判定結果：
+   - **ヒット**: 数字と位置が両方正解
+   - **ブロー**: 数字は正解だが位置が違う
+4. 4ヒットで勝利！
+
+## 📦 開発コマンド
+
+\`\`\`bash
+# 依存パッケージのインストール
+npm install
+
+# 開発サーバーの起動
+npm run dev
+
+# ビルド
+npm run build
+
+# プレビュー
+npm run preview
+
+# リント
+npm run lint
+\`\`\`
+
+## 🌐 デプロイ
+
+Firebase Hostingを使用してデプロイ予定
+
+---
+
+**開発開始日**: 2025年11月30日
+
