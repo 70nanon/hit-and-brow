@@ -4,11 +4,15 @@ import { createRoom, getWaitingRooms, joinRoom } from '../utils/roomService';
 import type { Room } from '../utils/roomTypes';
 import type { GameConfig } from '../utils/gameLogic';
 
+interface RoomListPageProps {
+  onJoinRoom: (roomId: string) => void;
+}
+
 /**
  * ルームリスト画面コンポーネント
  * ルームの作成と参加を行う
  */
-export default function RoomListPage() {
+export default function RoomListPage({ onJoinRoom }: RoomListPageProps) {
   const { user } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,16 +54,11 @@ export default function RoomListPage() {
         hostUid: user.uid,
       });
       
-      // ルーム画面に遷移（実装は後で）
-      console.log('ルーム作成成功:', roomId);
-      alert(`ルームID: ${roomId}\nルーム画面への遷移機能は次のステップで実装します`);
-      
-      // ルーム一覧を更新
-      await fetchRooms();
+      // ルーム画面に遷移
+      onJoinRoom(roomId);
     } catch (err) {
       setError('ルームの作成に失敗しました');
       console.error(err);
-    } finally {
       setLoading(false);
     }
   };
@@ -74,12 +73,8 @@ export default function RoomListPage() {
       setLoading(true);
       await joinRoom(roomId, user.uid);
       
-      // ルーム画面に遷移（実装は後で）
-      console.log('ルーム参加成功:', roomId);
-      alert(`ルームに参加しました: ${roomId}\nルーム画面への遷移機能は次のステップで実装します`);
-      
-      // ルーム一覧を更新
-      await fetchRooms();
+      // ルーム画面に遷移
+      onJoinRoom(roomId);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -87,7 +82,6 @@ export default function RoomListPage() {
         setError('ルームへの参加に失敗しました');
       }
       console.error(err);
-    } finally {
       setLoading(false);
     }
   };

@@ -3,18 +3,32 @@ import { useAuth } from './contexts/AuthContext';
 import { LoginPage } from './components/LoginPage';
 import GamePage from './components/GamePage';
 import RoomListPage from './components/RoomListPage';
+import OnlineGamePage from './components/OnlineGamePage';
 import './App.css';
 
-type Screen = 'menu' | 'singlePlay' | 'onlinePlay';
+type Screen = 'menu' | 'singlePlay' | 'onlinePlay' | 'onlineGame';
 
 function App() {
   const { user } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
+  const [currentRoomId, setCurrentRoomId] = useState<string>('');
 
   // ログインしていない場合はログイン画面を表示
   if (!user) {
     return <LoginPage />;
   }
+
+  // ルームに参加/作成したときの処理
+  const handleJoinRoom = (roomId: string) => {
+    setCurrentRoomId(roomId);
+    setCurrentScreen('onlineGame');
+  };
+
+  // ルームから退出したときの処理
+  const handleExitRoom = () => {
+    setCurrentRoomId('');
+    setCurrentScreen('onlinePlay');
+  };
 
   // メニュー画面
   if (currentScreen === 'menu') {
@@ -64,7 +78,7 @@ function App() {
     );
   }
 
-  // オンライン対戦画面
+  // オンライン対戦画面（ルーム一覧）
   if (currentScreen === 'onlinePlay') {
     return (
       <div>
@@ -74,9 +88,14 @@ function App() {
         >
           ← メニューに戻る
         </button>
-        <RoomListPage />
+        <RoomListPage onJoinRoom={handleJoinRoom} />
       </div>
     );
+  }
+
+  // オンライン対戦画面（ゲーム中）
+  if (currentScreen === 'onlineGame') {
+    return <OnlineGamePage roomId={currentRoomId} onExit={handleExitRoom} />;
   }
 
   return null;

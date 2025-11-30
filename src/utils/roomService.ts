@@ -4,6 +4,7 @@ import {
   getDoc, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -294,4 +295,13 @@ export async function finishGame(roomId: string): Promise<void> {
     status: 'finished',
     updatedAt: Date.now(),
   });
+}
+
+/**
+ * ルームを削除
+ * @param roomId ルームID
+ */
+export async function deleteRoom(roomId: string): Promise<void> {
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  await deleteDoc(roomRef);
 }
