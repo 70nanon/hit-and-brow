@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ルームコレクションのルール
+    match /rooms/{roomId} {
+      // 認証済みユーザーは読み取り可能
+      allow read: if request.auth != null;
+      
+      // 認証済みユーザーはルームを作成可能
+      allow create: if request.auth != null 
+        && request.resource.data.host.uid == request.auth.uid
+        && request.resource.data.status == 'waiting';
+      
+      // ホストまたはゲストのみが更新可能
+      allow update: if request.auth != null 
+        && (resource.data.host.uid == request.auth.uid 
+            || resource.data.guest.uid == request.auth.uid);
+      
+      // ホストのみが削除可能
+      allow delete: if request.auth != null 
+        && resource.data.host.uid == request.auth.uid;
+    }
+  }
+}
