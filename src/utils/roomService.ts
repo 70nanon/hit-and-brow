@@ -243,7 +243,23 @@ export async function getWaitingRooms(maxCount: number = 20): Promise<Room[]> {
   );
   const querySnapshot = await getDocs(q);
 
-  return querySnapshot.docs.map(doc => doc.data() as Room);
+  const rooms = querySnapshot.docs.map(doc => doc.data() as Room);
+  
+  // 古いルーム（1時間以上前）を削除
+  const ONE_HOUR = 60 * 60 * 1000;
+  const now = Date.now();
+  
+  const deletePromises = rooms
+    .filter(room => now - room.createdAt > ONE_HOUR)
+    .map(room => deleteRoom(room.id));
+  
+  if (deletePromises.length > 0) {
+    await Promise.all(deletePromises);
+    // 古いルームを除外して返す
+    return rooms.filter(room => now - room.createdAt <= ONE_HOUR);
+  }
+  
+  return rooms;
 }
 
 /**
