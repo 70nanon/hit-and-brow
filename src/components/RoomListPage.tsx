@@ -173,32 +173,37 @@ export default function RoomListPage({ onJoinRoom }: RoomListPageProps) {
             <p className="text-gray-500 text-center py-8">待機中のルームがありません</p>
           ) : (
             <div className="space-y-3">
-              {rooms.map((room) => (
-                <div
-                  key={room.id}
-                  className="flex justify-between items-center p-4 bg-gray-50 rounded hover:bg-gray-100"
-                >
-                  <div>
-                    <div className="font-medium">
-                      {room.config.digits}桁 
-                      {room.config.allowDuplicate ? ' (重複あり)' : ' (重複なし)'}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      ホスト: {room.host.uid.substring(0, 8)}...
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      作成: {new Date(room.createdAt).toLocaleString('ja-JP')}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleJoinRoom(room.id)}
-                    disabled={loading || room.host.uid === user?.uid}
-                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              {rooms.map((room) => {
+                const isFull = room.guest !== null;
+                const isMyRoom = room.host.uid === user?.uid;
+                
+                return (
+                  <div
+                    key={room.id}
+                    className="flex justify-between items-center p-4 bg-gray-50 rounded hover:bg-gray-100"
                   >
-                    {room.host.uid === user?.uid ? '自分のルーム' : '参加'}
-                  </button>
-                </div>
-              ))}
+                    <div>
+                      <div className="font-medium">
+                        {room.config.digits}桁 
+                        {room.config.allowDuplicate ? ' (重複あり)' : ' (重複なし)'}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        ホスト: {room.host.uid.substring(0, 8)}...
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        作成: {new Date(room.createdAt).toLocaleString('ja-JP')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleJoinRoom(room.id)}
+                      disabled={loading || isMyRoom || isFull}
+                      className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {isMyRoom ? '自分のルーム' : isFull ? '満員' : '参加'}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

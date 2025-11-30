@@ -9,6 +9,8 @@ import {
   query,
   where,
   getDocs,
+  orderBy,
+  limit,
   type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -39,6 +41,7 @@ export async function createRoom(data: CreateRoomData): Promise<string> {
       role: 'host',
       isReady: false,
       guesses: [],
+      lastActiveAt: now,
     },
     guest: null,
     currentTurn: 'host',
@@ -74,16 +77,18 @@ export async function joinRoom(roomId: string, guestUid: string): Promise<boolea
     throw new Error('このルームには参加できません');
   }
 
+  const now = Date.now();
   const guest: Player = {
     uid: guestUid,
     role: 'guest',
     isReady: false,
     guesses: [],
+    lastActiveAt: now,
   };
 
   await updateDoc(roomRef, {
     guest,
-    updatedAt: Date.now(),
+    updatedAt: now,
   });
 
   return true;
@@ -225,14 +230,36 @@ export function subscribeToRoom(
 
 /**
  * 待機中のルーム一覧を取得
- * @returns 待機中のルーム一覧
+ * @param maxCount 最大取得件数（デフォルト: 20）
+ * @returns 待機中のルーム一覧（新しい順）
  */
-export async function getWaitingRooms(): Promise<Room[]> {
+export async function getWaitingRooms(maxCount: number = 20): Promise<Room[]> {
   const roomsRef = collection(db, ROOMS_COLLECTION);
-  const q = query(roomsRef, where('status', '==', 'waiting'));
+  const q = query(
+    roomsRef,
+    where('status', '==', 'waiting'),
+    orderBy('createdAt', 'desc'),
+    limit(maxCount)
+  );
   const querySnapshot = await getDocs(q);
 
-  return querySnapshot.docs.map(doc => doc.data() as Room);
+  const rooms = querySnapshot.docs.map(doc => doc.data() as Room);
+  
+  // 古いルーム（1時間以上前）を削除
+  const ONE_HOUR = 60 * 60 * 1000;
+  const now = Date.now();
+  
+  const deletePromises = rooms
+    .filter(room => now - room.createdAt > ONE_HOUR)
+    .map(room => deleteRoom(room.id));
+  
+  if (deletePromises.length > 0) {
+    await Promise.all(deletePromises);
+    // 古いルームを除外して返す
+    return rooms.filter(room => now - room.createdAt <= ONE_HOUR);
+  }
+  
+  return rooms;
 }
 
 /**
@@ -304,4 +331,61 @@ export async function finishGame(roomId: string): Promise<void> {
 export async function deleteRoom(roomId: string): Promise<void> {
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
   await deleteDoc(roomRef);
+}
+
+/**
+ * ゲストをルームから退室させる
+ * @param roomId ルームID
+ */
+export async function leaveRoomAsGuest(roomId: string): Promise<void> {
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  const roomSnap = await getDoc(roomRef);
+
+  if (!roomSnap.exists()) {
+    throw new Error('ルームが見つかりません');
+  }
+
+  const room = roomSnap.data() as Room;
+
+  // ゲームが既に開始している場合は退室不可
+  if (room.status === 'playing' || room.status === 'finished') {
+    throw new Error('ゲーム中は退室できません');
+  }
+
+  await updateDoc(roomRef, {
+    guest: null,
+    updatedAt: Date.now(),
+  });
+}
+
+/**
+ * プレイヤーのアクティブ状態を更新
+ * @param roomId ルームID
+ * @param playerUid プレイヤーのUID
+ */
+export async function updatePlayerActive(
+  roomId: string,
+  playerUid: string
+): Promise<void> {
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  const roomSnap = await getDoc(roomRef);
+
+  if (!roomSnap.exists()) {
+    return;
+  }
+
+  const room = roomSnap.data() as Room;
+  const now = Date.now();
+
+  if (room.host.uid === playerUid) {
+    await updateDoc(roomRef, {
+      'host.lastActiveAt': now,
+      updatedAt: now,
+    });
+  } else if (room.guest?.uid === playerUid) {
+    await updateDoc(roomRef, {
+      'guest.lastActiveAt': now,
+      updatedAt: now,
+    });
+  }
 }
