@@ -9,7 +9,7 @@ import './App.css';
 type Screen = 'menu' | 'singlePlay' | 'onlinePlay' | 'onlineGame';
 
 function App() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
   const [currentRoomId, setCurrentRoomId] = useState<string>('');
 
@@ -17,6 +17,16 @@ function App() {
   if (!user) {
     return <LoginPage />;
   }
+
+  // ログアウト処理
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setCurrentScreen('menu');
+    } catch (error) {
+      console.error('ログアウトエラー:', error);
+    }
+  };
 
   // ルームに参加/作成したときの処理
   const handleJoinRoom = (roomId: string) => {
@@ -51,6 +61,13 @@ function App() {
                 className="w-full py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold text-lg"
               >
                 オンライン対戦
+              </button>
+
+              <button
+                onClick={handleSignOut}
+                className="w-full py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-bold"
+              >
+                ログアウト
               </button>
             </div>
 
