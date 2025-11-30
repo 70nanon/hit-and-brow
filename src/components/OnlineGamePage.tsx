@@ -10,7 +10,7 @@ import {
   updatePlayerActive,
   leaveRoomAsGuest,
 } from '../utils/roomService';
-import { generateRandomSecret, validateGuess, checkGuess, isGameClear } from '../utils/gameLogic';
+import { generateRandomSecret, validateGuess, checkGuess, isGameClear, isTurnLimitReached } from '../utils/gameLogic';
 import type { Room } from '../utils/roomTypes';
 
 interface OnlineGamePageProps {
@@ -100,23 +100,12 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
   };
 
   /**
-   * 秘密の数字を自動生成して設定
+   * 秘密の数字をランダムに生成（フォームに入力）
    */
-  const handleGenerateSecret = async () => {
-    if (!room || !user) return;
-
-    try {
-      setLoading(true);
-      const secret = generateRandomSecret(room.config);
-      setMySecret(secret);
-      await setPlayerSecret(roomId, user.uid, secret);
-      setError('');
-    } catch (err) {
-      setError('秘密の数字の設定に失敗しました');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  const handleGenerateSecret = () => {
+    if (!room) return;
+    const secret = generateRandomSecret(room.config);
+    setMySecret(secret);
   };
 
   /**
@@ -170,6 +159,13 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
     const validationError = validateGuess(currentGuess, room.config);
     if (validationError) {
       setError(validationError);
+      return;
+    }
+
+    // ターン数制限チェック
+    const currentTurnCount = myPlayer?.guesses.length || 0;
+    if (isTurnLimitReached(currentTurnCount, room.config)) {
+      setError('最大ターン数に達しました');
       return;
     }
 
@@ -233,6 +229,9 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
                   {room.config.digits}桁
                   {room.config.allowDuplicate ? ' (重複あり)' : ' (重複なし)'}
                 </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  最大ターン数: {room.config.maxTurns ? `${room.config.maxTurns}ターン` : '無制限'}
+                </p>
               </div>
 
               {/* プレイヤー情報 */}
@@ -273,19 +272,89 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
               {/* 秘密の数字設定 */}
               {!myPlayer?.secret && (
                 <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
-                  <p className="text-sm mb-2">秘密の数字を設定してください</p>
-                  <button
-                    onClick={handleGenerateSecret}
-                    disabled={loading}
-                    className="w-full py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:bg-gray-400"
-                  >
-                    自動生成
-                  </button>
-                  {mySecret && (
-                    <p className="text-sm mt-2 font-mono text-center">
-                      あなたの秘密の数字: <span className="font-bold">{mySecret}</span>
-                    </p>
-                  )}
+                  <p className="text-sm mb-3 font-medium">秘密の数字を設定してください</p>
+                  
+                  {/* 手動入力 */}
+                  <div className="mb-2">
+                    <label className="block text-xs text-gray-600 mb-1">数字を入力</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={mySecret}
+                        onChange={(e) => setMySecret(e.target.value)}
+                        placeholder={`${room.config.digits}桁の数字`}
+                        maxLength={room.config.digits}
+                        className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        disabled={loading}
+                      />
+                      <button
+                        onClick={handleGenerateSecret}
+                        disabled={loading}
+                        className="px-3 py-2 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:bg-gray-100"
+                        title="ランダムに生成"
+                      >
+                        🎲
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!user || !room) return;
+                          const validationError = validateGuess(mySecret, room.config);
+                          if (validationError) {
+                            setError(validationError);
+                            return;
+                          }
+                          try {
+                            setLoading(true);
+                            await setPlayerSecret(roomId, user.uid, mySecret);
+                            setError('');
+                          } catch (err) {
+                            setError('秘密の数字の設定に失敗しました');
+                            console.error(err);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading || !mySecret}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        設定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 秘密の数字表示 */}
+              {myPlayer?.secret && (
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-sm text-gray-600">あなたの秘密の数字</p>
+                    {!myPlayer.isReady && (
+                      <button
+                        onClick={async () => {
+                          if (!user) return;
+                          try {
+                            setLoading(true);
+                            await setPlayerSecret(roomId, user.uid, '');
+                            setMySecret('');
+                            setError('');
+                          } catch (err) {
+                            setError('秘密の数字のリセットに失敗しました');
+                            console.error(err);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading}
+                        className="text-xs text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+                      >
+                        変更
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-2xl font-mono font-bold text-center text-blue-700">
+                    {myPlayer.secret}
+                  </p>
                 </div>
               )}
 
@@ -333,6 +402,16 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
     // 勝敗判定
     const iWon = myResults.some((r) => isGameClear(r, room.config));
     const opponentWon = opponentResults.some((r) => isGameClear(r, room.config));
+    
+    // ターンオーバー判定（相手がターン数上限に達したら勝ち）
+    const myTurnCount = myPlayer?.guesses.length || 0;
+    const opponentTurnCount = opponentPlayer?.guesses.length || 0;
+    const iWonByTurnLimit = !opponentWon && isTurnLimitReached(opponentTurnCount, room.config);
+    const opponentWonByTurnLimit = !iWon && isTurnLimitReached(myTurnCount, room.config);
+
+    // 最終的な勝敗
+    const finalIWon = iWon || iWonByTurnLimit;
+    const finalOpponentWon = opponentWon || opponentWonByTurnLimit;
 
     return (
       <div className="min-h-screen bg-gray-100 py-8">
@@ -351,17 +430,20 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
             <p className="text-sm text-gray-600 mt-2">
               {room.config.digits}桁
               {room.config.allowDuplicate ? ' (重複あり)' : ' (重複なし)'}
+              {' / '}
+              ターン: {myPlayer?.guesses.length || 0}
+              {room.config.maxTurns && ` / ${room.config.maxTurns}`}
             </p>
           </div>
 
           {/* 勝敗表示 */}
-          {(iWon || opponentWon) && (
-            <div className={`${iWon ? 'bg-green-100 border-green-600' : 'bg-red-100 border-red-600'} border-2 rounded-lg p-6 mb-6 text-center`}>
+          {(finalIWon || finalOpponentWon) && (
+            <div className={`${finalIWon ? 'bg-green-100 border-green-600' : 'bg-red-100 border-red-600'} border-2 rounded-lg p-6 mb-6 text-center`}>
               <h3 className="text-2xl font-bold mb-2">
-                {iWon ? '🎉 勝利！' : '😢 敗北...'}
+                {finalIWon ? '🎉 勝利！' : '😢 敗北...'}
               </h3>
               <p className="mb-2">
-                {iWon ? 'おめでとうございます！' : '相手が先にクリアしました'}
+                {finalIWon ? (iWonByTurnLimit ? '相手がターン数上限に達しました！' : 'おめでとうございます！') : (opponentWonByTurnLimit ? 'ターン数上限に達しました...' : '相手が先にクリアしました')}
               </p>
               <p className="font-mono">
                 相手の数字: <span className="font-bold">{opponentPlayer?.secret}</span>
@@ -380,7 +462,7 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
               </h3>
               
               {/* 入力フォーム */}
-              {!iWon && !opponentWon && (
+              {!finalIWon && !finalOpponentWon && (
                 <form onSubmit={handleSubmitGuess} className="mb-4">
                   <div className="flex gap-2">
                     <input
@@ -400,7 +482,7 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
                       推測
                     </button>
                   </div>
-                  {!isMyTurn && !iWon && !opponentWon && (
+                  {!isMyTurn && !finalIWon && !finalOpponentWon && (
                     <p className="text-sm text-gray-500 mt-2">相手のターンです</p>
                   )}
                   {error && (
