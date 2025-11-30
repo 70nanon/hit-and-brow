@@ -9,6 +9,8 @@ import {
   query,
   where,
   getDocs,
+  orderBy,
+  limit,
   type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -228,11 +230,17 @@ export function subscribeToRoom(
 
 /**
  * 待機中のルーム一覧を取得
- * @returns 待機中のルーム一覧
+ * @param maxCount 最大取得件数（デフォルト: 20）
+ * @returns 待機中のルーム一覧（新しい順）
  */
-export async function getWaitingRooms(): Promise<Room[]> {
+export async function getWaitingRooms(maxCount: number = 20): Promise<Room[]> {
   const roomsRef = collection(db, ROOMS_COLLECTION);
-  const q = query(roomsRef, where('status', '==', 'waiting'));
+  const q = query(
+    roomsRef,
+    where('status', '==', 'waiting'),
+    orderBy('createdAt', 'desc'),
+    limit(maxCount)
+  );
   const querySnapshot = await getDocs(q);
 
   return querySnapshot.docs.map(doc => doc.data() as Room);
