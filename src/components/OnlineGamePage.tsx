@@ -8,6 +8,7 @@ import {
   submitGuess,
   deleteRoom,
   updatePlayerActive,
+  leaveRoomAsGuest,
 } from '../utils/roomService';
 import { generateRandomSecret, validateGuess, checkGuess, isGameClear } from '../utils/gameLogic';
 import type { Room } from '../utils/roomTypes';
@@ -79,13 +80,16 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
   }, [roomId, user]);
 
   /**
-   * ルームから退出（ホストの場合はルーム削除）
+   * ルームから退出（ホストの場合はルーム削除、ゲストの場合は退室）
    */
   const handleExit = async () => {
     try {
       if (isHost) {
         // ホストの場合はルームを削除
         await deleteRoom(roomId);
+      } else {
+        // ゲストの場合は退室
+        await leaveRoomAsGuest(roomId);
       }
       onExit();
     } catch (err) {

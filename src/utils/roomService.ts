@@ -318,6 +318,31 @@ export async function deleteRoom(roomId: string): Promise<void> {
 }
 
 /**
+ * ゲストをルームから退室させる
+ * @param roomId ルームID
+ */
+export async function leaveRoomAsGuest(roomId: string): Promise<void> {
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  const roomSnap = await getDoc(roomRef);
+
+  if (!roomSnap.exists()) {
+    throw new Error('ルームが見つかりません');
+  }
+
+  const room = roomSnap.data() as Room;
+
+  // ゲームが既に開始している場合は退室不可
+  if (room.status === 'playing' || room.status === 'finished') {
+    throw new Error('ゲーム中は退室できません');
+  }
+
+  await updateDoc(roomRef, {
+    guest: null,
+    updatedAt: Date.now(),
+  });
+}
+
+/**
  * プレイヤーのアクティブ状態を更新
  * @param roomId ルームID
  * @param playerUid プレイヤーのUID
