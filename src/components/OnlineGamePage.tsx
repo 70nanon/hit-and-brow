@@ -100,23 +100,12 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
   };
 
   /**
-   * 秘密の数字を自動生成して設定
+   * 秘密の数字をランダムに生成（フォームに入力）
    */
-  const handleGenerateSecret = async () => {
-    if (!room || !user) return;
-
-    try {
-      setLoading(true);
-      const secret = generateRandomSecret(room.config);
-      setMySecret(secret);
-      await setPlayerSecret(roomId, user.uid, secret);
-      setError('');
-    } catch (err) {
-      setError('秘密の数字の設定に失敗しました');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  const handleGenerateSecret = () => {
+    if (!room) return;
+    const secret = generateRandomSecret(room.config);
+    setMySecret(secret);
   };
 
   /**
@@ -283,19 +272,89 @@ export default function OnlineGamePage({ roomId, onExit }: OnlineGamePageProps) 
               {/* 秘密の数字設定 */}
               {!myPlayer?.secret && (
                 <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
-                  <p className="text-sm mb-2">秘密の数字を設定してください</p>
-                  <button
-                    onClick={handleGenerateSecret}
-                    disabled={loading}
-                    className="w-full py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:bg-gray-400"
-                  >
-                    自動生成
-                  </button>
-                  {mySecret && (
-                    <p className="text-sm mt-2 font-mono text-center">
-                      あなたの秘密の数字: <span className="font-bold">{mySecret}</span>
-                    </p>
-                  )}
+                  <p className="text-sm mb-3 font-medium">秘密の数字を設定してください</p>
+                  
+                  {/* 手動入力 */}
+                  <div className="mb-2">
+                    <label className="block text-xs text-gray-600 mb-1">数字を入力</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={mySecret}
+                        onChange={(e) => setMySecret(e.target.value)}
+                        placeholder={`${room.config.digits}桁の数字`}
+                        maxLength={room.config.digits}
+                        className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        disabled={loading}
+                      />
+                      <button
+                        onClick={handleGenerateSecret}
+                        disabled={loading}
+                        className="px-3 py-2 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:bg-gray-100"
+                        title="ランダムに生成"
+                      >
+                        🎲
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!user || !room) return;
+                          const validationError = validateGuess(mySecret, room.config);
+                          if (validationError) {
+                            setError(validationError);
+                            return;
+                          }
+                          try {
+                            setLoading(true);
+                            await setPlayerSecret(roomId, user.uid, mySecret);
+                            setError('');
+                          } catch (err) {
+                            setError('秘密の数字の設定に失敗しました');
+                            console.error(err);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading || !mySecret}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        設定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 秘密の数字表示 */}
+              {myPlayer?.secret && (
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-sm text-gray-600">あなたの秘密の数字</p>
+                    {!myPlayer.isReady && (
+                      <button
+                        onClick={async () => {
+                          if (!user) return;
+                          try {
+                            setLoading(true);
+                            await setPlayerSecret(roomId, user.uid, '');
+                            setMySecret('');
+                            setError('');
+                          } catch (err) {
+                            setError('秘密の数字のリセットに失敗しました');
+                            console.error(err);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading}
+                        className="text-xs text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+                      >
+                        変更
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-2xl font-mono font-bold text-center text-blue-700">
+                    {myPlayer.secret}
+                  </p>
                 </div>
               )}
 
